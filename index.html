@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lawand Fuß - Ping-Pong Spiel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            border: 1px solid #000;
+            background-color: #fff;
+        }
+        .start-screen, .lose-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        h1, h2 {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="start-screen" id="startScreen">
+        <h1>Lawand Fuß - Ping-Pong Spiel</h1>
+        <h2>Lawand Fuß ist der Beste!</h2>
+        <button class="button" onclick="startGame('bot')">Gegen Bot spielen</button>
+        <button class="button" onclick="startGame('local')">Lokal spielen</button>
+    </div>
+    <div class="lose-screen" id="loseScreen" style="display:none;">
+        <h1>You Lose</h1>
+        <h2>Du Lawand Träger, nächstes Mal besser spielen oder Fiqi Papa kommt!</h2>
+        <button class="button" onclick="restartGame()">Weiter spielen</button>
+        <button class="button" onclick="showStartScreen()">Hauptmenü</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="400" style="display:none;"></canvas>
+    <h2 id="footerText" style="display:none;">Lawand Fuß ist der Beste!</h2>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const paddleWidth = 10;
+        const paddleHeight = 100;
+        const paddleSpeed = 7;
+        const ballRadius = 10;
+        let ballX, ballY, ballDX, ballDY;
+        let player1Y, player2Y;
+        let scorePlayer1 = 0;
+        let scorePlayer2 = 0;
+        let gameMode;
+        let upPressed = false;
+        let downPressed = false;
+        let upPressedPlayer2 = false;
+        let downPressedPlayer2 = false;
+
+        function startGame(mode) {
+            gameMode = mode;
+            document.getElementById("startScreen").style.display = 'none';
+            document.getElementById("loseScreen").style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById("footerText").style.display = 'block';
+            resetGame();
+            draw();
+        }
+
+        function resetGame() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballDX = 3 * (Math.random() > 0.5 ? 1 : -1);
+            ballDY = 3 * (Math.random() > 0.5 ? 1 : -1);
+            player1Y = canvas.height / 2 - paddleHeight / 2;
+            player2Y = canvas.height / 2 - paddleHeight / 2;
+            scorePlayer1 = 0;
+            scorePlayer2 = 0;
+        }
+
+        function restartGame() {
+            resetGame();
+            document.getElementById("loseScreen").style.display = 'none';
+            canvas.style.display = 'block';
+            document.getElementById("footerText").style.display = 'block';
+            draw();
+        }
+
+        function showStartScreen() {
+            document.getElementById("loseScreen").style.display = 'none';
+            document.getElementById("startScreen").style.display = 'flex';
+        }
+
+        function drawPaddle(x, y) {
+            ctx.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawScore() {
+            ctx.font = "24px Arial";
+            ctx.fillText(`Spieler 1: ${scorePlayer1}`, 20, 30);
+            ctx.fillText(`Spieler 2: ${scorePlayer2}`, canvas.width - 150, 30);
+        }
+
+        function movePlayer1() {
+            if (upPressed && player1Y > 0) {
+                player1Y -= paddleSpeed;
+            }
+            if (downPressed && player1Y < canvas.height - paddleHeight) {
+                player1Y += paddleSpeed;
+            }
+        }
+
+        function movePlayer2() {
+            if (gameMode === 'bot') {
+                if (ballY < player2Y + paddleHeight / 2 && player2Y > 0) {
+                    player2Y -= paddleSpeed;
+                }
+                if (ballY > player2Y + paddleHeight / 2 && player2Y < canvas.height - paddleHeight) {
+                    player2Y += paddleSpeed;
+                }
+            } else {
+                if (upPressedPlayer2 && player2Y > 0) {
+                    player2Y -= paddleSpeed;
+                }
+                if (downPressedPlayer2 && player2Y < canvas.height - paddleHeight) {
+                    player2Y += paddleSpeed;
+                }
+            }
+        }
+
+        function collisionDetection() {
+            if (ballY + ballDY > canvas.height - ballRadius || ballY + ballDY < ballRadius) {
+                ballDY = -ballDY;
+            }
+
+            if (ballX + ballDX < paddleWidth) {
+                if (ballY > player1Y && ballY < player1Y + paddleHeight) {
+                    ballDX = -ballDX;
+                } else {
+                    scorePlayer2++;
+                    if (gameMode === 'bot' && scorePlayer2 >= 3) {
+                        showLoseScreen();
+                        return;
+                    }
+                    resetBall();
+                }
+            }
+
+            if (ballX + ballDX > canvas.width - paddleWidth) {
+                if (ballY > player2Y && ballY < player2Y + paddleHeight) {
+                    ballDX = -ballDX;
+                } else {
+                    scorePlayer1++;
+                    resetBall();
+                }
+            }
+        }
+
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballDX = 3 * (Math.random() > 0.5 ? 1 : -1);
+            ballDY = 3 * (Math.random() > 0.5 ? 1 : -1);
+        }
+
+        function showLoseScreen() {
+            canvas.style.display = 'none';
+            document.getElementById("footerText").style.display = 'none';
+            document.getElementById("loseScreen").style.display = 'flex';
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPaddle(0, player1Y);
+            drawPaddle(canvas.width - paddleWidth, player2Y);
+            drawBall();
+            drawScore();
+            collisionDetection();
+
+            ballX += ballDX;
+            ballY += ballDY;
+
+            movePlayer1();
+            movePlayer2();
+
+            requestAnimationFrame(draw);
+        }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "w") {
+                upPressed = true;
+            }
+            if (event.key === "s") {
+                downPressed = true;
+            }
+            if (event.key === "ArrowUp") {
+                upPressedPlayer2 = true;
+            }
+            if (event.key === "ArrowDown") {
+                downPressedPlayer2 = true;
+            }
+        });
+
+        document.addEventListener("keyup", function (event) {
+            if (event.key === "w") {
+                upPressed = false;
+            }
+            if (event.key === "s") {
+                downPressed = false;
+            }
+            if (event.key === "ArrowUp") {
+                upPressedPlayer2 = false;
+            }
+            if (event.key === "ArrowDown") {
+                downPressedPlayer2 = false;
+            }
+        });
+    </script>
+</body>
+</html>
